@@ -1,3 +1,4 @@
+import os
 import telebot
 from telebot import types
 from datetime import datetime, timedelta
@@ -6,6 +7,7 @@ from psycopg2.extras import RealDictCursor
 import requests
 import json
 import uuid
+from urllib.parse import urlparse
 
 # Bot konfiguratsiyasi
 TOKEN = "7290637755:AAGvGnOKGQBANL3HWvZqK7_4Fp7vhWZAMDs"  # Tokenni o‘zingiz bilan almashtiring
@@ -17,19 +19,22 @@ CHEK_TOPIC_ID = "3"  # Chek topic ID
 SHIKOYAT_TOPIC_ID = "5"  # Shikoyat topic ID
 bot = telebot.TeleBot(TOKEN)
 
-# Ma'lumotlar bazasi konfiguratsiyasi
-DB_CONFIG = {
-    "host": "localhost",
-    "database": "hamidovic_bot",
-    "user": "postgres",  # O‘zingizning DB username bilan almashtiring
-    "password": "8888",  # O‘zingizning DB parol bilan almashtiring
-    "port": "5432"
-}
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 # Ma'lumotlar bazasi ulanishi
 def get_db_connection():
     try:
-        return psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
+        # DATABASE_URL orqali ulanish
+        parsed_url = urlparse(DATABASE_URL)
+        conn = psycopg2.connect(
+            database=parsed_url.path[1:],  # database nomini olamiz
+            user=parsed_url.username,       # username
+            password=parsed_url.password,   # password
+            host=parsed_url.hostname,       # host
+            port=parsed_url.port,           # port
+            sslmode='require'               # SSL ulanishi
+        )
+        return conn
     except Exception as e:
         print(f"Database connection error: {e}")
         return None
@@ -93,6 +98,7 @@ def init_db():
     conn.close()
 
 init_db()
+
 
 # Yordamchi funksiyalar
 def get_user_lang(user_id):
